@@ -13,25 +13,32 @@ RIGHT JOIN
 FULL JOIN
     Table5 ON Table4.id = Table5.id'''
 
+
+##query = '''SELECT CCustomers.CustomerID, Customers.CustomerName, Orders.OrderID, Orders.OrderDate, Payments.PaymentID, Payments.PaymentAmount
+##FROM Customers
+##INNER JOIN Orders ON Customers.CustomerID = Orders.CustomerID
+##LEFT JOIN Payments ON Customers.CustomerID = Payments.CustomerID;'''
+
 alias_to_real = {}
 
 g = nx.DiGraph()
 parsed = sqlparse.parse(query)
 for stmt in parsed:
-    for i, token in enumerate(stmt.tokens):
+    tokens = [token for token in stmt.tokens if not token.is_whitespace]
+    for i, token in enumerate(tokens):
         if hasattr(token, 'get_real_name') and token.get_alias() is not None:
             alias_to_real[token.get_alias()] = token.get_real_name()
-        if stmt.tokens[i-2].value == 'ON':
-            left_table = token.left.get_parent_name()
+        if token.value == 'ON':
+            left_table = tokens[i+1].token.left.get_parent_name()
             if left_table in alias_to_real:
                 left_table = alias_to_real[left_table]
-            right_table = token.right.get_parent_name()
+            right_table = tokens[i+1].token.right.get_parent_name()
             if right_table in alias_to_real:
                 right_table = alias_to_real[right_table]
             g.add_edge(
-                '.'.join([left_table, token.left.get_name()]),
-                '.'.join([right_table, token.right.get_name()]),
-                join_type=stmt.tokens[i-10].value
+                '.'.join([left_table, tokens[i+1].token.left.get_name()]),
+                '.'.join([right_table, tokens[i+1].token.right.get_name()]),
+                join_type=tokens[i-10].value
                 )
 
 import matplotlib.pyplot as plt
